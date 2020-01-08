@@ -1,13 +1,13 @@
 from idaapi import *
 from idautils import *
 from idc import *
-from wdf import *
-from wdm import *
+from .wdf import *
+from .wdm import *
 
 # List of C/C++ functions that are commonly vulnerable
 # TODO make a much more comprehensive list for Windows
 c_functions = [
-    "sprintf", 
+    "sprintf",
     "strcpy",
     "strcat",
     "memcpy",
@@ -48,7 +48,7 @@ cb: Callback function needed by idaapi.enum_import_names().
 @param name: Name of enumerated function
 @param ord: Ordinal of enumerated function. Not used for imports.
 
-@return int: 1 okay, -1 on error, otherwise callback return value 
+@return int: 1 okay, -1 on error, otherwise callback return value
 #####################################################################'''
 
 def cb(ea, name, ord):
@@ -60,14 +60,14 @@ def cb(ea, name, ord):
 populate_function_map: Loads functions known to IDA from the sub
                        and imports section into a map.
 
-@return boolean: True if functions loaded successfully, otherwise False 
+@return boolean: True if functions loaded successfully, otherwise False
 #####################################################################'''
 
 def populate_function_map():
     ret = False
     # Populate function_map with sub functions
     for address in Functions():
-        name = GetFunctionName(address)
+        name = get_func_name(address)
         functions_map[name] = address
         ret = True
     # Populate function_map with import functions
@@ -82,12 +82,12 @@ def populate_function_map():
 populate_c_map: Enumerate through the list of all functions and load
                 vulnerable C functions found into a map.
 
-@return boolean: True if vulnerable functions found, otherwise False 
+@return boolean: True if vulnerable functions found, otherwise False
 #####################################################################'''
 
 def populate_c_map():
     ret = False
-    for name, address in functions_map.iteritems():
+    for name, address in functions_map.items():
         if name in c_functions:
             c_map[name] = address
             ret = True
@@ -97,12 +97,12 @@ def populate_c_map():
 populate_winapi_map: Enumerate through the list of all functions and load
                      vulnerable winapi functions found into a map.
 
-@return boolean: True if vulnerable functions found, otherwise False 
+@return boolean: True if vulnerable functions found, otherwise False
 #####################################################################'''
 
 def populate_winapi_map():
     ret = False
-    for name, address in functions_map.iteritems():
+    for name, address in functions_map.items():
         for winfunc in winapi_functions:
             if name.lower().startswith(winfunc.lower()):
                 winapi_map[name] = address
@@ -113,12 +113,12 @@ def populate_winapi_map():
 populate_driver_map: Enumerate through the list of all functions and load
                      vulnerable driver functions found into a map.
 
-@return boolean: True if vulnerable functions found, otherwise False 
+@return boolean: True if vulnerable functions found, otherwise False
 #####################################################################'''
 
 def populate_driver_map():
     ret = False
-    for name, address in functions_map.iteritems():
+    for name, address in functions_map.items():
         if name in driver_functions:
             driver_map[name] = address
             ret = True
@@ -128,72 +128,72 @@ def populate_driver_map():
 populate_winapi_map: Enumerate through the list of all functions and load
                      vulnerable winapi functions found into a map.
 
-@return boolean: True if vulnerable functions found, otherwise False 
+@return boolean: True if vulnerable functions found, otherwise False
 #####################################################################'''
 
 def populate_data_structures():
     error = False
-    print "[+] Populating IDA functions...."
+    print("[+] Populating IDA functions....")
     error = populate_function_map()
     if error != True:
-        print "[+] Couldn't populate function_map"
+        print("[+] Couldn't populate function_map")
         return error
-    print "[+] Searching for interesting C functions...."
+    print("[+] Searching for interesting C functions....")
     error = populate_c_map()
     if error != True:
-        print "[-] No interesting C functions detected"
+        print("[-] No interesting C functions detected")
     else:
-        print "[+] interesting C functions detected"
+        print("[+] interesting C functions detected")
         get_xrefs(c_map)
-    print "[+] Searching for interesting Windows functions...."
+    print("[+] Searching for interesting Windows functions....")
     error = populate_winapi_map()
     if error != True:
-        print "[-] No interesting winapi functions detected"
+        print("[-] No interesting winapi functions detected")
     else:
-        print "[+] interesting winapi functions detected"
+        print("[+] interesting winapi functions detected")
         get_xrefs(winapi_map)
-    print "[+] Searching for interesting driver functions...."
+    print("[+] Searching for interesting driver functions....")
     error = populate_driver_map()
     if error != True:
-        print "[-] No interesting specific driver functions detected"
+        print("[-] No interesting specific driver functions detected")
     else:
-        print "[+] interesting driver functions detected"
+        print("[+] interesting driver functions detected")
         get_xrefs(driver_map)
 
 '''#####################################################################
 get_xrefs: Gets cross references to vulnerable functions stored in maps.
 
 @param fmap: function map you want xrefs for
- 
+
 #####################################################################'''
 
 def get_xrefs(fmap):
-    for name, address in fmap.iteritems():
+    for name, address in fmap.items():
         code_refs = CodeRefsTo(int(address), 0)
         for ref in code_refs:
             xref = "0x%08x" % ref
-            print "[+] Found %s xref to %s" % (xref, name)
+            print("[+] Found %s xref to %s" % (xref, name))
 
 '''#####################################################################
 get_driver_id: Attempts to determine the type of driver loaded by using
                functions found inside the imports section.
 
 @return boolean: True if able to determine driver type, False otherwise
- 
+
 #####################################################################'''
 
 def get_driver_id(driver_entry_address):
-    print "[+] Trying to determine driver type..."
+    print("[+] Trying to determine driver type...")
     driver_type=""
     # Iterate through imports and try to determine driver type
-    for name, address in imports_map.iteritems():
+    for name, address in imports_map.items():
         if name == "FltRegisterFilter":
             driver_type = "Mini-Filter"
             break
         elif name == "WdfVersionBind":
             driver_type = "WDF"
             populate_wdf()
-  	    break
+            break
         elif name == "StreamClassRegisterMinidriver":
             driver_type = "Stream Minidriver"
             break
@@ -211,24 +211,24 @@ def get_driver_id(driver_entry_address):
         real_driver_entry = check_for_fake_driver_entry(driver_entry_address)
         real_ddc_addr = locate_ddc(real_driver_entry)
         if real_ddc_addr != None:
-            for ddc in real_ddc_addr.itervalues():
+            for ddc in real_ddc_addr.values():
                 define_ddc(ddc)
 
     return driver_type
 
 '''#####################################################################
-is_driver: Checks to determine that file loaded in IDA is actually a 
+is_driver: Checks to determine that file loaded in IDA is actually a
            Windows driver by ensuring DriverEntry is in the exports section.
 
 @return boolean: True if DriverEntry found in exports, False otherwise
- 
+
 #####################################################################'''
 
 def is_driver():
     driver_entry_address=""
-    print "[+] Checking for DriverEntry..."
+    print("[+] Checking for DriverEntry...")
     for ea in Segments():
-        for funcea in Functions(SegStart(ea),SegEnd(ea)):
-            fn = GetFunctionName(funcea)
+        for funcea in Functions(get_segm_start(ea),get_segm_end(ea)):
+            fn = get_func_name(funcea)
             if fn == "DriverEntry":
                 return funcea

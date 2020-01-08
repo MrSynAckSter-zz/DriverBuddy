@@ -27,25 +27,25 @@ class DriverBuddyPlugin(plugin_t):
         return PLUGIN_KEEP
 
     def run(self, args):
-        print "[+] Welcome to Driver Buddy"
-        autoWait() # Wait for IDA autoanalysis to complete
+        print("[+] Welcome to Driver Buddy")
+        auto_wait() # Wait for IDA autoanalysis to complete
         driver_entry = data.is_driver()
-	if driver_entry == "":
-            print "[-] No DriverEntry stub found"
-            print "[-] Exiting..."
+        if driver_entry == "":
+            print("[-] No DriverEntry stub found")
+            print("[-] Exiting...")
             return
-        print "[+] DriverEntry found"
+        print("[+] DriverEntry found")
         if data.populate_data_structures() == False:
-            print "[-] Unable to load functions"
-            print "[-] Exiting..."
+            print("[-] Unable to load functions")
+            print("[-] Exiting...")
             return
-	driver_type = data.get_driver_id(driver_entry)
+        driver_type = data.get_driver_id(driver_entry)
         if driver_type == "":
-            print "[-] Unable to determine driver type assuming wdm"
+            print("[-] Unable to determine driver type assuming wdm")
         else:
-            print "[+] Driver type detected: " + driver_type
+            print(("[+] Driver type detected: " + driver_type))
         if ioctl.find_ioctls() == False:
-            print "[-] Unable to automatically find any IOCTLs"
+            print("[-] Unable to automatically find any IOCTLs")
         return
 
     def decode(self, _=0):
